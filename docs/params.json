@@ -1,0 +1,6 @@
+{
+  "name": "CSharp-KeyboardIntercept-Authorization",
+  "tagline": "本程序与CSharp-KeyboardIntercept-Zww配套使用，为键盘拦截正常授权提供授权码。",
+  "body": "## 欢迎一起学习.Net\r\n\r\n### 程序功能及使用说明\r\n\r\n1.程序可生成单授权序列和单授权码、根据用户提供的txt文本批量生成授权码；  \r\n2.生成单授权码需要输入姓名，勾选写入文件，可将授权序列、授权码写入文件；授权序列存储于D:\KeyFile\SinglePrioList.exe，授权码存储于D:\KeyFile\SinglePrioData.exe；  \r\n3.批量生成授权码需要存在文件D:\KeyFile\NameList.txt，文件中存储的是被授权人的姓名，以换行为分隔。授权序列组存储于D:\KeyFile\MultiplePrioList.exe，授权文件存储于文件夹D:\KeyFile\MultiplePrioData中；  \r\n4.生成的单个的授权序列通过按钮复制，批量生成授权码可在界面中显示，通过上一个、下一个控制；  \r\n55.程序内路径及文件名的修改请参考文件ForAuthorization.cs中参数定义；  \r\n\r\n### 程序其他说明  \r\n注意：  \r\n姓名格式中不允许包含中文字符且不超过20个字符；  \r\n授权文件在U盘中的可识别名称为PrioData.exe，授权服务器中授权序列列表可识别名称为PrioList.exe；  \r\n程序界面内的提醒都是真的！  \r\n\r\n### 联系方式\r\nQQ：245655340  \r\n邮箱：[245655340@qq.com](http://mail.qq.com)",
+  "note": "Don't delete this file!"
+}
