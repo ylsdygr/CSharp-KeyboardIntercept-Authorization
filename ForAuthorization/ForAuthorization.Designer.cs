@@ -28,20 +28,22 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.MaximizeBox = false;
             this.Name_TextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.TextBox_NewAuthorizedString = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.TextBox_NewAuthorizedKey = new System.Windows.Forms.TextBox();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.CB_WriteToFile = new System.Windows.Forms.CheckBox();
             this.Single = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
+            this.Multiple = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.Notice = new System.Windows.Forms.Label();
             this.BTN_CopyNewString = new System.Windows.Forms.Button();
             this.BTN_CopyKey = new System.Windows.Forms.Button();
+            this.BTN_Previous = new System.Windows.Forms.Button();
+            this.BTN_Next = new System.Windows.Forms.Button();
+            this.BTN_Clear = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // Name_TextBox
@@ -51,7 +53,6 @@
             this.Name_TextBox.Size = new System.Drawing.Size(172, 21);
             this.Name_TextBox.TabIndex = 0;
             this.Name_TextBox.TextChanged += new System.EventHandler(this.Name_TextBox_TextChanged);
-            //this.Name_TextBox.ImeMode = System.Windows.Forms.ImeMode.Alpha;
             // 
             // label1
             // 
@@ -98,19 +99,19 @@
             this.TextBox_NewAuthorizedKey.TabIndex = 5;
             this.TextBox_NewAuthorizedKey.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
-            // checkBox1
+            // CB_WriteToFile
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(274, 27);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(72, 16);
-            this.checkBox1.TabIndex = 6;
-            this.checkBox1.Text = "写入文件";
-            this.checkBox1.UseVisualStyleBackColor = true;
+            this.CB_WriteToFile.AutoSize = true;
+            this.CB_WriteToFile.Location = new System.Drawing.Point(274, 27);
+            this.CB_WriteToFile.Name = "CB_WriteToFile";
+            this.CB_WriteToFile.Size = new System.Drawing.Size(72, 16);
+            this.CB_WriteToFile.TabIndex = 6;
+            this.CB_WriteToFile.Text = "写入文件";
+            this.CB_WriteToFile.UseVisualStyleBackColor = true;
             // 
             // Single
             // 
-            this.Single.Location = new System.Drawing.Point(362, 24);
+            this.Single.Location = new System.Drawing.Point(352, 24);
             this.Single.Name = "Single";
             this.Single.Size = new System.Drawing.Size(75, 23);
             this.Single.TabIndex = 7;
@@ -118,14 +119,15 @@
             this.Single.UseVisualStyleBackColor = true;
             this.Single.Click += new System.EventHandler(this.Single_Click);
             // 
-            // button2
+            // Multiple
             // 
-            this.button2.Location = new System.Drawing.Point(454, 24);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(75, 23);
-            this.button2.TabIndex = 8;
-            this.button2.Text = "批量生成";
-            this.button2.UseVisualStyleBackColor = true;
+            this.Multiple.Location = new System.Drawing.Point(442, 24);
+            this.Multiple.Name = "Multiple";
+            this.Multiple.Size = new System.Drawing.Size(75, 23);
+            this.Multiple.TabIndex = 8;
+            this.Multiple.Text = "批量生成";
+            this.Multiple.UseVisualStyleBackColor = true;
+            this.Multiple.Click += new System.EventHandler(this.Multiple_Click);
             // 
             // label4
             // 
@@ -143,11 +145,12 @@
             this.Notice.Name = "Notice";
             this.Notice.Size = new System.Drawing.Size(137, 12);
             this.Notice.TabIndex = 10;
-            this.Notice.Text = "这里显示相关动作的说明";
+            this.Notice.Text = "这里显示相关动作的说明,看仔细了,出事了别怪我没说!";
             // 
             // BTN_CopyNewString
             // 
-            this.BTN_CopyNewString.Location = new System.Drawing.Point(535, 24);
+            this.BTN_CopyNewString.Enabled = false;
+            this.BTN_CopyNewString.Location = new System.Drawing.Point(532, 24);
             this.BTN_CopyNewString.Name = "BTN_CopyNewString";
             this.BTN_CopyNewString.Size = new System.Drawing.Size(75, 23);
             this.BTN_CopyNewString.TabIndex = 11;
@@ -157,7 +160,8 @@
             // 
             // BTN_CopyKey
             // 
-            this.BTN_CopyKey.Location = new System.Drawing.Point(614, 24);
+            this.BTN_CopyKey.Enabled = false;
+            this.BTN_CopyKey.Location = new System.Drawing.Point(622, 24);
             this.BTN_CopyKey.Name = "BTN_CopyKey";
             this.BTN_CopyKey.Size = new System.Drawing.Size(75, 23);
             this.BTN_CopyKey.TabIndex = 12;
@@ -165,18 +169,54 @@
             this.BTN_CopyKey.UseVisualStyleBackColor = true;
             this.BTN_CopyKey.Click += new System.EventHandler(this.BTN_CopyKey_Click);
             // 
+            // BTN_Previous
+            // 
+            this.BTN_Previous.Enabled = false;
+            this.BTN_Previous.Location = new System.Drawing.Point(352, 85);
+            this.BTN_Previous.Name = "BTN_Previous";
+            this.BTN_Previous.Size = new System.Drawing.Size(75, 23);
+            this.BTN_Previous.TabIndex = 13;
+            this.BTN_Previous.Text = "上一个";
+            this.BTN_Previous.UseVisualStyleBackColor = true;
+            this.BTN_Previous.Click += new System.EventHandler(this.BTN_Previous_Click);
+            // 
+            // BTN_Next
+            // 
+            this.BTN_Next.Enabled = false;
+            this.BTN_Next.Location = new System.Drawing.Point(442, 85);
+            this.BTN_Next.Name = "BTN_Next";
+            this.BTN_Next.Size = new System.Drawing.Size(75, 23);
+            this.BTN_Next.TabIndex = 14;
+            this.BTN_Next.Text = "下一个";
+            this.BTN_Next.UseVisualStyleBackColor = true;
+            this.BTN_Next.Click += new System.EventHandler(this.BTN_Next_Click);
+            // 
+            // BTN_Clear
+            // 
+            this.BTN_Clear.Enabled = false;
+            this.BTN_Clear.Location = new System.Drawing.Point(532, 85);
+            this.BTN_Clear.Name = "BTN_Clear";
+            this.BTN_Clear.Size = new System.Drawing.Size(75, 23);
+            this.BTN_Clear.TabIndex = 15;
+            this.BTN_Clear.Text = "清空";
+            this.BTN_Clear.UseVisualStyleBackColor = true;
+            this.BTN_Clear.Click += new System.EventHandler(this.BTN_Clear_Click);
+            // 
             // ForAuthorization
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(709, 185);
+            this.ClientSize = new System.Drawing.Size(709, 158);
+            this.Controls.Add(this.BTN_Clear);
+            this.Controls.Add(this.BTN_Next);
+            this.Controls.Add(this.BTN_Previous);
             this.Controls.Add(this.BTN_CopyKey);
             this.Controls.Add(this.BTN_CopyNewString);
             this.Controls.Add(this.Notice);
             this.Controls.Add(this.label4);
-            this.Controls.Add(this.button2);
+            this.Controls.Add(this.Multiple);
             this.Controls.Add(this.Single);
-            this.Controls.Add(this.checkBox1);
+            this.Controls.Add(this.CB_WriteToFile);
             this.Controls.Add(this.TextBox_NewAuthorizedKey);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.TextBox_NewAuthorizedString);
@@ -184,7 +224,9 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.Name_TextBox);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
             this.Name = "ForAuthorization";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "授权序列及授权码生成器";
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -199,9 +241,9 @@
         private System.Windows.Forms.TextBox TextBox_NewAuthorizedString;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox TextBox_NewAuthorizedKey;
-        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckBox CB_WriteToFile;
         private System.Windows.Forms.Button Single;
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button Multiple;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label Notice;
 
@@ -215,6 +257,9 @@
 
         private System.Windows.Forms.Button BTN_CopyNewString;
         private System.Windows.Forms.Button BTN_CopyKey;
+        private System.Windows.Forms.Button BTN_Previous;
+        private System.Windows.Forms.Button BTN_Next;
+        private System.Windows.Forms.Button BTN_Clear;
     }
 }
 
