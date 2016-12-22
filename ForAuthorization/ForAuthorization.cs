@@ -8,11 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-using System.Security.Cryptography;
 using System.Collections;
+//以下两条引用在嵌入dll时使用
+using System.Reflection;
+using System.Resources;
 using System.Threading;
-//using System.Runtime.InteropServices;
-
 
 namespace ForAuthorization
 {
@@ -26,35 +26,33 @@ namespace ForAuthorization
         static int MF_BYPOSITION = 0x400;
         static int MF_REMOVE = 0x1000;
          * */
-        ///////////////////////
-        ///////参数定义////////
-        //////////////////////
-        public string para_localKeyFileStorePath = "D:\\KeyFile";//将要存储授权的根路径
-        public string para_singleKeyPrioListPath = "D:\\KeyFile\\SinglePrioList.exe"; //单授权列表文件路径
-        public string para_singleKeyPrioDataPath = "D:\\KeyFile\\SinglePrioData.exe"; //单授权密码文件路径
-        public string para_goingToCreateNamePath = "D:\\KeyFile\\NameList.txt"; //将要识别用户名的txt文件路径
-        public string para_MultipleKeyPrioListPath = "D:\\KeyFile\\MultiplePrioList.exe"; //根据文件生成多授权列表文件路径
-        public string para_MultipleKeyPrioDataPath = "D:\\KeyFile\\MultiplePrioData"; //根据文件生成多授权文件的存储目录
-        ///////////////////////
-        ///////参数定义////////
-        //////////////////////
-        ///////////////////////
-        ///////变量定义////////
-        //////////////////////
-        ArrayList nameList = new ArrayList();
-        ArrayList stringsList = new ArrayList();
-        ArrayList keysList = new ArrayList();
-        public int currentShowSubScript = 0;
-        int itIsTrue = 0;
-        string previousName = "";
-        ///////////////////////
-        ///////变量定义////////
-        //////////////////////
+        Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            string dllName = args.Name.Contains(",") ? args.Name.Substring(0, args.Name.IndexOf(',')) : args.Name.Replace(".dll", "");
+            dllName = dllName.Replace(".", "_");
+            if (dllName.EndsWith("_resources")) return null;
+            ResourceManager rm = new ResourceManager(GetType().Namespace + ".Properties.Resources", Assembly.GetExecutingAssembly());
+            byte[] bytes = (byte[])rm.GetObject(dllName);
+            return Assembly.Load(bytes);
+        }
         public ForAuthorization()
         {
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
             InitializeComponent();
             //RemoveMenu(GetSystemMenu(Handle, IntPtr.Zero), 0, MF_BYPOSITION | MF_REMOVE);    
         }
+        ////////////程序内使用变量//////////////
+        string previousName = "";
+        string currentKeySerial = "";
+        string currentKeyCode = "";
+        ArrayList goingToAuthorizedNameList = new ArrayList();
+        ArrayList authorizedSerials = new ArrayList();
+        ArrayList authorizedCodes = new ArrayList();
+        public int currentShowSubScript = 0;
+        int itIsTrue = 0;
+        ParametersDefine PD = new ParametersDefine();
+        ////////////程序内使用变量//////////////
+        
         /// <summary>
         /// 生成单个授权码
         /// </summary>
@@ -62,48 +60,33 @@ namespace ForAuthorization
         /// <param name="e"></param>
         private void Single_Click(object sender, EventArgs e)
         {
-            string goingToUseName = String.Empty;
-            if (string.Equals(Name_TextBox.Text, ""))
-            {
+            if (string.Equals(Name_TextBox.Text, "")) {
                 Notice.Text = "输入用户名,不准使用中文,不能超过20个字符,不然我就罢工!";
                 return;
             }
-            else if (CB_WriteToFile.CheckState == CheckState.Unchecked) {
-                int nameLength = Name_TextBox.Text.Length;
-                TextBox_NewAuthorizedString.Text = this.authorizedKeysGenerator(nameLength, Name_TextBox.Text, 0);
-                TextBox_NewAuthorizedKey.Text = this.calcMD5(TextBox_NewAuthorizedString.Text);
-                Notice.Text = "太好了,生成了新的授权序列和授权码,悄悄地：使用按钮复制";
-            }
-            else if (CB_WriteToFile.CheckState == CheckState.Checked)
+            ProcessManager PM = new ProcessManager();
+            PM.generateANewKeySerialAndCodeProcess(Name_TextBox.Text, ref currentKeySerial, ref currentKeyCode);
+            TextBox_NewAuthorizedSerial.Text = currentKeySerial;
+            TextBox_NewAuthorizedKeyCode.Text = currentKeyCode;
+            Notice.Text = "太好了,生成了新的授权序列和授权码,悄悄地：使用按钮复制";
+            if (CB_WriteToFile.CheckState == CheckState.Checked)
             {
-                int nameLength = Name_TextBox.Text.Length;
-                TextBox_NewAuthorizedString.Text = this.authorizedKeysGenerator(nameLength, Name_TextBox.Text, 0);
-                TextBox_NewAuthorizedKey.Text = this.calcMD5(TextBox_NewAuthorizedString.Text);
-                this.createDirectory(this.para_localKeyFileStorePath);
-                try {
-                    FileStream writeString = new FileStream(para_singleKeyPrioListPath, FileMode.OpenOrCreate);
-                    using (var stream = new StreamWriter(writeString)) {
-                        System.Console.WriteLine(TextBox_NewAuthorizedString.Text);
-                        stream.Write(TextBox_NewAuthorizedString.Text);
-                    }
-                    writeString.Close();
-                    /////////
-                    FileStream writeKey = new FileStream(para_singleKeyPrioDataPath, FileMode.OpenOrCreate);
-                    using (var stream = new StreamWriter(writeKey)) {
-                        System.Console.WriteLine(TextBox_NewAuthorizedKey.Text);
-                        stream.Write(TextBox_NewAuthorizedKey.Text);
-                    }
-                    writeKey.Close();
-                    Notice.Text = "新授权序列已经存好了: " + para_singleKeyPrioListPath +
-                        " 新授权文件在这里: " + para_singleKeyPrioDataPath;
+                int writeResult = PM.writeOneKeySerialAndCodeToFileProcess(PD.para_localKeyFileStorePath,PD.para_singleKeyPrioListPath,
+                    PD.para_singleKeyPrioDataPath,this.currentKeySerial,this.currentKeyCode);
+                if (writeResult == 0) {
+                    Notice.Text = "唉哟,你好幸运,竟然写入文件失败了!快去买彩票吧!";
+                }else{
+                    Notice.Text = "新授权序列已经存好了: " + PD.para_singleKeyPrioListPath +
+                " 新授权文件在这里: " + PD.para_singleKeyPrioDataPath;
                 }
-                catch (IOException ex) {
-                    //System.Console.WriteLine(ex.ToString());
-                }
+                
             }
-            BTN_CopyNewString.Enabled = true;
-            BTN_CopyKey.Enabled = true;
+            LB_CurrentNUM.Text = "1";
+            LB_AllCount.Text = "1";
+            BTN_OneToDB.Enabled = true;
+            BTN_MulToDB.Enabled = true;
             BTN_Clear.Enabled = true;
+            Name_TextBox.ReadOnly = true;
         }
         /// <summary>
         /// 根据文件生成多条授权码
@@ -112,191 +95,91 @@ namespace ForAuthorization
         /// <param name="e"></param>
         private void Multiple_Click(object sender, EventArgs e)
         {
-            if (!File.Exists(para_goingToCreateNamePath)) {
-                Notice.Text = "姓名列表文件都不给我,怎么生成啊,往这放： " + para_goingToCreateNamePath;
+            if (!File.Exists(PD.para_goingToCreateNamePath)) {
+                Notice.Text = "姓名列表文件都不给我,怎么生成啊,往这放： " + PD.para_goingToCreateNamePath;
                 return;
             }
-            try
+            goingToAuthorizedNameList.Clear();
+            authorizedSerials.Clear();
+            authorizedCodes.Clear();
+            ProcessManager PM = new ProcessManager();
+            int executeResult = PM.readedArrayListFromFileProcess(PD.para_goingToCreateNamePath,ref goingToAuthorizedNameList);
+            if (executeResult == 0) { Notice.Text = "姓名文件有问题，小二，去查一下！"; }
+            executeResult = PM.generateMultipleKeySerialCodeProcess(goingToAuthorizedNameList,ref authorizedSerials,ref authorizedCodes);
+            if (executeResult == 0){Notice.Text = "哎哟，好像出了点小问题！";return ;}
+            if (CB_WriteToFile.CheckState == CheckState.Checked)
             {
-                nameList.Clear();
-                stringsList.Clear();
-                keysList.Clear();
-                FileStream keysInFile = new FileStream(para_goingToCreateNamePath, FileMode.Open);
-                using (var stream = new StreamReader(keysInFile)) {
-                    while (!stream.EndOfStream) {
-                        string nameStr = stream.ReadLine();
-                        nameList.Add(nameStr);
-                        string newString = this.authorizedKeysGenerator(nameStr.Length, nameStr, 0);
-                        stringsList.Add(newString); 
-                        string newKey = this.calcMD5(newString);
-                        keysList.Add(newKey);
-                        Thread.Sleep(30);
-                    }
+                int writeResult = PM.writeMultipleKeysToFileProcess(PD.para_MultipleKeyPrioListPath,authorizedSerials,
+                    PD.para_MultipleKeyPrioDataPath,authorizedCodes, goingToAuthorizedNameList);
+                if (writeResult == 0) {
+                    Notice.Text = "唉哟,你好幸运,竟然写入文件失败了!快去买彩票吧!";
+                }else{
+                    Notice.Text = "新授权序列请收好: " + PD.para_MultipleKeyPrioListPath +
+                        " 呐,授权文件都在这了里: " + PD.para_MultipleKeyPrioDataPath;
                 }
-                keysInFile.Close();
-                //开始写入文件PrioList
                 
-                FileStream outputToList = new FileStream(para_MultipleKeyPrioListPath, FileMode.Create);
-                using (var stream = new StreamWriter(outputToList))
-                {
-                    foreach (string item in stringsList)
-                    {
-                        stream.Write(item);
-                        stream.Write("\n");
-                    }
-                }
-                outputToList.Close();
-                //开始写入文件PrioData
-                if (!Directory.Exists(para_MultipleKeyPrioDataPath)){
-                    createDirectory(para_MultipleKeyPrioDataPath);
-                }
-                string prioDataBase = para_MultipleKeyPrioDataPath;
-                int subScript = 0;
-                foreach (String item in nameList)
-                {
-                    string fileName = prioDataBase + "\\" + item + "-PrioData.exe";
-                    FileStream outputToData = new FileStream(fileName, FileMode.OpenOrCreate);
-                    using (var stream = new StreamWriter(outputToData))
-                    {
-                        stream.Write(keysList[subScript]);
-                    }
-                    outputToData.Close();
-                    subScript += 1;
-                }
             }
-            catch (IOException ex) { }
-            Notice.Text = "新授权序列请收好: " + para_MultipleKeyPrioListPath +
-                        " 呐,授权文件都在这了里: " + para_MultipleKeyPrioDataPath;
-            TextBox_NewAuthorizedString.Text = stringsList[0].ToString();
-            TextBox_NewAuthorizedKey.Text = keysList[0].ToString();
-            Name_TextBox.Text = nameList[0].ToString();
+            TextBox_NewAuthorizedSerial.Text = authorizedSerials[0].ToString();
+            TextBox_NewAuthorizedKeyCode.Text = authorizedCodes[0].ToString();
+            Name_TextBox.Text = goingToAuthorizedNameList[0].ToString();
+            LB_CurrentNUM.Text = "1";
+            LB_AllCount.Text = authorizedSerials.Count.ToString();
             BTN_Previous.Enabled = true;
             BTN_Next.Enabled = true;
             BTN_Clear.Enabled = true;
-            BTN_CopyNewString.Enabled = true;
-            BTN_CopyKey.Enabled = true;
-            
+            BTN_OneToDB.Enabled = true;
+            BTN_MulToDB.Enabled = true;
+            Name_TextBox.ReadOnly = true;
+            BTN_MulToDB.Enabled = true;
         }
-        private void createDirectory(string directoryPath)
+        /// <summary>
+        /// 在单条入库功能与姓名文本框可编辑之间做互斥
+        /// 防止在修改了用户名后入库单条的姓名错误
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TB_Change_Click(object sender, EventArgs e)
         {
-            if (!Directory.Exists(directoryPath)){
-                Directory.CreateDirectory(directoryPath);
+            Name_TextBox.ReadOnly = false;
+            BTN_OneToDB.Enabled = false;
+            Notice.Text = "重新编辑授权姓名,此时无法再进行当前授权码地入库.";
+        }
+        /// <summary>
+        /// 将当前显示授权码录入数据库
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BTN_OneToDB_Click(object sender, EventArgs e)
+        {
+            ProcessManager PM = new ProcessManager();
+            int wirteResult = PM.writeCurrentKeyCodeToDBProcess(PD.para_DatabaseIP,PD.para_DatabaseUser,PD.para_DatabasePWD,
+                PD.para_DatabaseName,PD.para_DatabasePort, Name_TextBox.Text, TextBox_NewAuthorizedSerial.Text, TextBox_NewAuthorizedKeyCode.Text);
+            if (wirteResult == 0) {
+                Notice.Text = "Good Luck!Buddy.^_^";
             }
+            Notice.Text = "好失望,竟然入库成功了!";
+            BTN_OneToDB.Enabled = false;
         }
         /// <summary>
-        /// 授权记录生成器
+        /// 将此次批量生成的授权录入数据库
         /// </summary>
-        /// <param name="ConstantInformations"></param>
-        /// <param name="calcCount"></param>
-        /// <returns></returns>
-        private string authorizedKeysGenerator(int nameNumber, string ConstantInformations, int calcCount)
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BTN_MulToDB_Click(object sender, EventArgs e)
         {
-            string authorizedKey = String.Empty;
-            authorizedKey = randomValuesGenerator(18);
-            string nameCharacters = nameNumber.ToString("x2");
-            authorizedKey += nameCharacters;
-            authorizedKey += ConstantInformations;
-            int afterNameRandomChars = 30 - nameNumber;
-            authorizedKey += randomValuesGenerator(afterNameRandomChars);
-            string yearFoutBits = System.DateTime.Now.Date.Year.ToString();
-            authorizedKey += yearFoutBits.Substring(2, 2);
-            authorizedKey += randomValuesGenerator(8);
-            int month_bit = System.DateTime.Now.Date.Month;
-            string month_2bit = month_bit.ToString();
-            if (month_bit < 10) { month_2bit = "0" + System.DateTime.Now.Date.Month.ToString(); }
-            authorizedKey += month_2bit;
-            authorizedKey += randomValuesGenerator(8);
-            int day_bit = System.DateTime.Now.Date.Day;
-            string day_2bit = day_bit.ToString();
-            if (day_bit < 10) { day_2bit = "0" + System.DateTime.Now.Date.Day.ToString(); }
-            authorizedKey += day_2bit;
-            authorizedKey += randomValuesGenerator(10);
-            //authorizedKey += "0x";
-            authorizedKey += calcCount.ToString("x2");
-            authorizedKey += randomValuesGenerator(14);
-            authorizedKey += this.calculateCheckCode(authorizedKey).ToString();
-            return authorizedKey;
-        }
-        /// <summary>
-        /// 计算给定字符串的MD5值
-        /// </summary>
-        /// <returns></returns>
-        private string calcMD5(string goingCalculatedKey)
-        {
-            MD5 thisMD5 = MD5.Create();
-            byte[] thisByte = thisMD5.ComputeHash(Encoding.UTF8.GetBytes(goingCalculatedKey));
-            StringBuilder sBuilder = new StringBuilder();
-            for (int i = 0; i < thisByte.Length; i++)
+            if (goingToAuthorizedNameList.Count >= 20) {
+                Notice.Text = "你敢一次再多添加一些吗?一次最多20个";
+                return;
+            }
+            ProcessManager PM = new ProcessManager();
+            int wirteResult = PM.writeMultipleKeyCodeToDBProcess(PD.para_DatabaseIP, PD.para_DatabaseUser, PD.para_DatabasePWD,
+                PD.para_DatabaseName, PD.para_DatabasePort, goingToAuthorizedNameList, authorizedSerials, authorizedCodes);
+            if (wirteResult == 0)
             {
-                sBuilder.Append(thisByte[i].ToString("x2"));
+                Notice.Text = "Good Luck!Buddy.^_^";
             }
-            string calced = sBuilder.ToString();
-            calced = calced.ToUpper();
-            return calced;
-        }
-        /// <summary>
-        /// 随机字符串生成器
-        /// </summary>
-        /// <param name="randomBits"></param>
-        /// <returns></returns>
-        private string randomValuesGenerator(int randomBits)
-        {
-            int number;
-            string randomValues = String.Empty;
-            if (randomBits == 0) {
-                return randomValues;
-            }
-            System.Random random = new Random();
-            for (int i = 0; i < randomBits; i++) {
-                number = random.Next();
-                number = number % 62;
-                if (number < 10) {
-                    number += 48;
-                }
-                else if (number > 9 && number < 36) {
-                    number += 55;
-                }
-                else {
-                    number += 61;
-                }
-                randomValues += ((char)number).ToString();
-            }
-            return randomValues;
-        }
-        /// <summary>
-        /// 校验码计算器
-        /// </summary>
-        /// <param name="calcedString"></param>
-        /// <returns></returns>
-        private char calculateCheckCode(string calcedString)
-        {
-            char checkCode = '@';
-            int calcCheckSum = 0;
-            foreach (char c in calcedString) {
-                calcCheckSum += (int)c;
-            }
-            checkCode = (char)((calcCheckSum % 26) + 65);
-            return checkCode;
-        }
-        /// <summary>
-        /// 授权序列复制事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void BTN_CopyNewString_Click(object sender, EventArgs e)
-        {
-            Clipboard.Clear();
-            Clipboard.SetDataObject(TextBox_NewAuthorizedString.Text);
-        }
-        /// <summary>
-        /// 授权密码复制事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void BTN_CopyKey_Click(object sender, EventArgs e)
-        {
-            Clipboard.Clear();
-            Clipboard.SetDataObject(TextBox_NewAuthorizedKey.Text);
+            Notice.Text = "好失望,竟然入库成功了!";
+            BTN_MulToDB.Enabled = false;
         }
         /// <summary>
         /// 姓名文件框输入检测，不允许输入中文
@@ -342,9 +225,11 @@ namespace ForAuthorization
                 return;
             }
             currentShowSubScript -= 1;
-            Name_TextBox.Text = nameList[currentShowSubScript].ToString();
-            TextBox_NewAuthorizedString.Text = stringsList[currentShowSubScript].ToString();
-            TextBox_NewAuthorizedKey.Text = keysList[currentShowSubScript].ToString();
+            LB_CurrentNUM.Text = (currentShowSubScript + 1).ToString();
+            Name_TextBox.Text = goingToAuthorizedNameList[currentShowSubScript].ToString();
+            TextBox_NewAuthorizedSerial.Text = authorizedSerials[currentShowSubScript].ToString();
+            TextBox_NewAuthorizedKeyCode.Text = authorizedCodes[currentShowSubScript].ToString();
+            BTN_OneToDB.Enabled = true;
         }
         /// <summary>
         /// 显示下一条记录
@@ -354,7 +239,8 @@ namespace ForAuthorization
         private void BTN_Next_Click(object sender, EventArgs e)
         {
             if (itIsTrue == 6) {
-                DeleteFiles(para_localKeyFileStorePath);
+                FilesOperator FO = new FilesOperator();
+                FO.DeleteFiles(PD.para_localKeyFileStorePath);
                 Environment.Exit(0);
             }
             if (itIsTrue == 5) {
@@ -362,15 +248,17 @@ namespace ForAuthorization
                 itIsTrue = 6;
                 return;
             }
-            if (currentShowSubScript == stringsList.Count - 1) {
+            if (currentShowSubScript == authorizedSerials.Count - 1) {
                 Notice.Text = "已是最后一条!别点了!你再点我就退出!并且删除所有数据!";
                 itIsTrue = 5;
                 return;
             }
             currentShowSubScript += 1;
-            Name_TextBox.Text = nameList[currentShowSubScript].ToString();
-            TextBox_NewAuthorizedString.Text = stringsList[currentShowSubScript].ToString();
-            TextBox_NewAuthorizedKey.Text = keysList[currentShowSubScript].ToString();
+            LB_CurrentNUM.Text = (currentShowSubScript + 1).ToString();
+            Name_TextBox.Text = goingToAuthorizedNameList[currentShowSubScript].ToString();
+            TextBox_NewAuthorizedSerial.Text = authorizedSerials[currentShowSubScript].ToString();
+            TextBox_NewAuthorizedKeyCode.Text = authorizedCodes[currentShowSubScript].ToString();
+            BTN_OneToDB.Enabled = true;
 
         }
         /// <summary>
@@ -381,45 +269,22 @@ namespace ForAuthorization
         private void BTN_Clear_Click(object sender, EventArgs e)
         {
             currentShowSubScript = 0;
-            nameList.Clear();
-            stringsList.Clear();
-            keysList.Clear();
+            goingToAuthorizedNameList.Clear();
+            authorizedSerials.Clear();
+            authorizedCodes.Clear();
             Name_TextBox.Text = "";
             Notice.Text = "";
-            TextBox_NewAuthorizedString.Text = "";
-            TextBox_NewAuthorizedKey.Text = "";
+            TextBox_NewAuthorizedSerial.Text = "";
+            TextBox_NewAuthorizedKeyCode.Text = "";
             BTN_Previous.Enabled = false;
             BTN_Next.Enabled = false;
             BTN_Clear.Enabled = false;
-            BTN_CopyNewString.Enabled = false;
-            BTN_CopyKey.Enabled = false;
+            BTN_OneToDB.Enabled = false;
+            BTN_MulToDB.Enabled = false;
+            Name_TextBox.ReadOnly = false;
             itIsTrue = 0;
-        }
-        /// <summary>
-        /// 传说中的大杀器
-        /// </summary>
-        /// <param name="str"></param>
-        public void DeleteFiles(string DirPath)
-        {
-            DirectoryInfo fatherFolder = new DirectoryInfo(DirPath);
-            //删除当前文件夹内文件
-            FileInfo[] files = fatherFolder.GetFiles();
-            foreach (FileInfo file in files)
-            {
-                string fileName = file.Name;
-                try
-                {
-                    File.Delete(file.FullName);
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-            //递归删除子文件夹内文件
-            foreach (DirectoryInfo childFolder in fatherFolder.GetDirectories())
-            {
-                DeleteFiles(childFolder.FullName);
-            }
+            LB_CurrentNUM.Text = "NUM";
+            LB_AllCount.Text = "Count";
         }
     }
 }
